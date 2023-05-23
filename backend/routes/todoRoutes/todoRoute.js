@@ -2,6 +2,8 @@ const express=require('express')
 const todoCollection = require('../../models/todoModels/todoModel')
 const todoRouter=express.Router()
 
+const BASE_URL=process.env.BASE_URL
+
 todoRouter.post('/task',async(req,res)=>{
     try{
         const newTask=new todoCollection(req.body)

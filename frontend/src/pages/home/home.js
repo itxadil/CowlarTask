@@ -261,6 +261,7 @@ function Todo() {
       await axios
         .patch(`http://localhost:3500/task/${taskId}`, {
           completed: selectedTask.completed,
+          completedTime: selectedTask.completed ? new Date().toLocaleString() : null
         })
         .then(() => {
           console.log("Task updated successfully");
