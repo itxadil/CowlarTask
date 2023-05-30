@@ -1,9 +1,10 @@
 import React from "react";
-import Modal from "react-bootstrap/Modal";
 import { useEffect } from "react";
 import axios from "axios";
 import ReactRoundedImage from "react-rounded-image";
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   Toolbar,
   IconButton,
@@ -12,6 +13,7 @@ import {
   Button,
 } from "@material-ui/core";
 import background from "../../assets/images/bgImg.jpg";
+import Apis from "../../configapi/apis";
 import profileImg from "../../assets/images/profileImg.jpeg";
 import MenuIcon from "@material-ui/icons/Menu";
 import KeyboardArrowDownIcon from "@material-ui/icons/KeyboardArrowDown";
@@ -33,6 +35,12 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     paddingTop: "20px",
   },
+  profileImageContainer: {
+    position: "relative",
+    borderRadius: "50%",
+    overflow: "hidden",
+    boxShadow: "0px 10px 10px rgba(0, 0, 0, 0.3)",
+  },
   profileImage: {
     display: "flex",
     justifyContent: "center",
@@ -40,6 +48,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100vh",
   },
   container: {
+    boxShadow: "0 10px 10px rgba(10, 10, 10, 0.5)",
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
@@ -69,16 +78,23 @@ const useStyles = makeStyles((theme) => ({
   },
   input: {
     marginRight: theme.spacing(1),
+    boxShadow: "0px 200px 200px rgba(0, 0, 0, 0.3)",
+    width: "90%",
+    background: "#C4A484",
     border: "2px solid white",
     "&::placeholder": {
       color: "white",
+      fontWeight: "bolder",
     },
   },
   addButton: {
     marginLeft: theme.spacing(1),
     height: "55px",
+    borderRadius: "10px",
+    boxShadow: "0px 200px 200px rgba(0, 0, 0, 0.3)",
   },
   tasksDiv: {
+    boxShadow: "0px 200px 200px rgba(0, 0, 0, 0.3)",
     marginTop: "20px",
     borderRadius: "8px",
     background: "white",
@@ -117,7 +133,7 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
     padding: theme.spacing(1),
-    marginBottom:'-10px'
+    marginBottom: "-10px",
   },
   taskContainer: {
     display: "flex",
@@ -125,7 +141,7 @@ const useStyles = makeStyles((theme) => ({
   },
   Line: {
     width: "100%",
-    marginBottom:'-10px'
+    marginBottom: "-10px",
   },
   deleteButton: {
     height: "30px",
@@ -155,6 +171,7 @@ const useStyles = makeStyles((theme) => ({
     border: "2px solid #ccc",
     backgroundColor: "#fff",
     marginLeft: "10px",
+    boxShadow: "inset 0 0 5px rgba(0, 0, 0, 0.3)",
   },
   radioButtonChecked: {
     backgroundColor: "#C4A484",
@@ -184,22 +201,6 @@ const useStyles = makeStyles((theme) => ({
       width: "33.33%",
     },
   },
-  modal: {
-    backgroundColor: "#C4A484",
-    borderRadius: "20px",
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: `translate(-50%, -50%)`,
-    width: "100%",
-    height: "200px",
-    [theme.breakpoints.up("sm")]: {
-      width: "50%",
-    },
-    [theme.breakpoints.up("md")]: {
-      width: "37.33%",
-    },
-  },
 }));
 function Todo() {
   // use styles declared above
@@ -207,29 +208,28 @@ function Todo() {
   // hooks for state management
   const [task, setTask] = useState("");
   const [tasksList, setTasksList] = useState([]);
-  const [show, setShow] = useState(false);
-  const [findTask, setFindTask] = useState("");
-  const handleClose = () => setShow(false);
-  // opening the modal for confirmation of task deletion
-  const handleShow = (e) => {
-    tasksList.map((task) => {
-      if ((task._id = e.currentTarget.id)) {
-        console.log("!Task found", task._id);
-        setFindTask(task._id);
-      } else {
-        console.log("NOT found");
-      }
-    });
-    setShow(true);
-  };
+  const [showDeleteButtonId, setShowDeleteButtonId] = useState(null);
   //below useEffect is for getting data from database
   useEffect(() => {
     const getData = async () => {
-      const response = await axios.get("http://localhost:3500/task");
+      const response = await axios.get(`${Apis.task}`);
       setTasksList(response.data);
     };
     getData();
   }, []);
+  const completionNotification = () =>
+    toast.success("The task is successfully marked as completed");
+  const errorNotification = () =>
+    toast.error("Task feild is empty.!", {
+      position: "bottom-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
   // below useEffect is for adding the task in todi list by presing enter key
   useEffect(() => {
     const keyDownHandler = (event) => {
@@ -239,7 +239,7 @@ function Todo() {
           event.preventDefault();
           handleAddTask();
         } else {
-          alert("Please enter the task");
+          errorNotification();
         }
       }
     };
@@ -248,6 +248,8 @@ function Todo() {
       document.removeEventListener("keydown", keyDownHandler);
     };
   });
+  const notify = () => toast.success("Task added successfully!");
+  const notifyDelete = () => toast.success("Task deleted successfully!");
   const handleInputChange = (event) => {
     setTask(event.target.value);
   };
@@ -255,13 +257,14 @@ function Todo() {
   const handleTaskSelection = async (taskId) => {
     const updatedTasksList = [...tasksList];
     const selectedTask = updatedTasksList.find((task) => task._id === taskId);
-
     if (selectedTask) {
       selectedTask.completed = !selectedTask.completed;
       await axios
-        .patch(`http://localhost:3500/task/${taskId}`, {
+        .patch(`${Apis.task}/${taskId}`, {
           completed: selectedTask.completed,
-          completedTime: selectedTask.completed ? new Date().toLocaleString() : null
+          completedTime: selectedTask.completed
+            ? new Date().toLocaleString()
+            : null,
         })
         .then(() => {
           console.log("Task updated successfully");
@@ -269,46 +272,60 @@ function Todo() {
         .catch((e) => {
           console.log("Error updating task:", e);
         });
+
       setTasksList(updatedTasksList);
+      {
+        selectedTask.completed && completionNotification();
+      }
     }
   };
   // adding task into todo list by clicking on add button (you can also add item by pressing enetr key)
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     const newTask = {
       task: task,
       completed: false,
       completedTime: null,
       creationTime: new Date().toLocaleString(),
     };
-    const response = axios.post("http://localhost:3500/task", newTask);
-    window.location.reload();
-    console.log(response);
+    await axios
+      .post(`${Apis.task}`, newTask)
+      .then((response) => {
+        setTasksList(response.data);
+        setTask("");
+        notify();
+      })
+      .catch((e) => {
+        console.log(e);
+      });
   };
   // handle deletion of selected task
-  const handleDelete = async (e) => {
+  const handleDelete = async (task) => {
     await axios
-      .delete(`http://localhost:3500/task/${findTask}`)
-      .then(() => {
+      .delete(`${Apis.task}/${task}`)
+      .then((response) => {
         console.log("!Deleted");
+        setTasksList(response.data);
+        notifyDelete();
+        setShowDeleteButtonId(null);
       })
       .catch((e) => {
         console.log("ISSUE", e);
       });
-    setShow(false);
-    window.location.reload();
   };
   return (
     // root of the page where Iam showing image on background of the page
     <div className={classes.root}>
       <div className={classes.roundedImageContainer}>
-        <ReactRoundedImage
-          className={classes.profileImage}
-          image={profileImg}
-          roundedColor="#C4A484"
-          imageWidth={120}
-          imageHeight={120}
-          roundedSize="10"
-        />
+        <div className={classes.profileImageContainer}>
+          <ReactRoundedImage
+            className={classes.profileImage}
+            image={profileImg}
+            roundedColor="#BFCCB5"
+            imageWidth={120}
+            imageHeight={120}
+            roundedSize="5"
+          />
+        </div>
       </div>
       <Toolbar>
         <div className={classes.container}>
@@ -360,18 +377,49 @@ function Todo() {
                       )}
                     </div>
                   </label>
-                  <h4 style={{ marginLeft: "20px", fontFamily: "sans-serif", fontWeight:'normal'  }}>
+                  <h4
+                    style={{
+                      marginLeft: "20px",
+                      fontFamily: "sans-serif",
+                      fontWeight: "normal",
+                    }}
+                  >
                     {task.task}
                   </h4>
                 </div>
-                <Button
-                  id={task._id}
-                  className={classes.deleteButton}
-                  onClick={handleShow}
-                >
-                 <MoreVertIcon style={{marginLeft:'-10px', color:'gray'}}/>
-                 <MoreVertIcon style={{marginLeft:'-10px', color:'gray'}}/>
-                </Button>
+                {showDeleteButtonId === task._id ? ( 
+                  <div style={{ display: "flex", flexDirection: "row"}}>
+                    <Button
+                      id={task._id}
+                      style={{ color: "#C4A484", fontWeight: "bolder" }}
+                      onClick={() => setShowDeleteButtonId(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      id={task._id}
+                      style={{ color: "#C4A484", fontWeight: "bolder" }}
+                      onClick={() => handleDelete(task._id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      id={task._id}
+                      className={classes.moreVertButton}
+                      onClick={() => setShowDeleteButtonId(task._id)}
+                    >
+                      <MoreVertIcon
+                        style={{ marginLeft: "-10px", color: "gray" }}
+                      />
+                      <MoreVertIcon
+                        style={{ marginLeft: "-10px", color: "gray" }}
+                      />
+                    </Button>
+                  </>
+                )}
               </div>
               {index !== tasksList.length - 1 && (
                 <hr className={classes.Line} />
@@ -407,60 +455,39 @@ function Todo() {
             },
           }}
         />
-        <Button
-          variant="contained"
-          color="primary"
-          className={classes.addButton}
-          onClick={handleAddTask}
-          disabled={task == ""}
-        >
-          Add
-        </Button>
+        {task !== "" ? (
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.addButton}
+            onClick={handleAddTask}
+          >
+            Add
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.addButton}
+            onClick={handleAddTask}
+            disabled
+          >
+            Add
+          </Button>
+        )}
       </div>
-      <Modal className={classes.modal} show={show} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title
-            style={{
-              fontSize: "25px",
-              fontWeight: "bolder",
-              fontFamily: "monospace",
-              marginLeft: "20px",
-              marginTop: "10px",
-            }}
-          >
-            Delete task
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body
-          style={{
-            fontSize: "15px",
-            fontWeight: "bold",
-            fontFamily: "monospace",
-            marginLeft: "20px",
-            marginTop: "10px",
-          }}
-        >
-          Are you sure you want to delete the task !
-        </Modal.Body>
-        <Modal.Footer
-          style={{ marginTop: "20px", float: "right", marginRight: "20px" }}
-        >
-          <Button
-            style={{ backgroundColor: "gray", marginRight: "20px" }}
-            variant="secondary"
-            onClick={handleClose}
-          >
-            No
-          </Button>
-          <Button
-            style={{ backgroundColor: "gray" }}
-            variant="primary"
-            onClick={handleDelete}
-          >
-            Yes
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

@@ -8,8 +8,6 @@ const app=express()
 app.use(bodyParser.urlencoded({extended:true}))
 app.use(cors())
 app.use(express.json())
-const mongoDBURL='mongodb://localhost:27017/cowlarTODO'
-const mongoose=require('mongoose')
 app.use(db,(req,res,next)=>{
     next()
 })

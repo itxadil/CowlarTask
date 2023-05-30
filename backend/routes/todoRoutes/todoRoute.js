@@ -1,44 +1,50 @@
 const express=require('express')
 const todoCollection = require('../../models/todoModels/todoModel')
 const todoRouter=express.Router()
+require("dotenv").config()
 
 const BASE_URL=process.env.BASE_URL
-
-todoRouter.post('/task',async(req,res)=>{
+todoRouter.post(`${BASE_URL}`,async(req,res)=>{
     try{
         const newTask=new todoCollection(req.body)
         console.log(req.body)
         newTask.save()
-        res.send("New task Added")
+        const tasks=await todoCollection.find()
+        res.send(tasks)
     }catch(e){
-       res.status(500).send(e)
+       const statusCode = e.status || 500;
+       res.status(statusCode).send(e.message)
     }
 })
 
-todoRouter.get('/task',async(req,res)=>{
+todoRouter.get(`${BASE_URL}`,async(req,res)=>{
     try{
         const newTask=await todoCollection.find()
         res.send(newTask)
     }catch(e){
-       res.status(500).send(e)
+        const statusCode = e.status || 500;
+        res.status(statusCode).send(e.message)
     }
 })
 
-todoRouter.patch('/task/:id',async(req,res)=>{
+todoRouter.patch(`${BASE_URL}/:id`,async(req,res)=>{
     try{
         await todoCollection.findByIdAndUpdate({_id:req.params.id},req.body, {new:true})
         res.send("!Task Updated")
     }catch(e){
-       res.status(500).send(e)
+        const statusCode = e.status || 500;
+        res.status(statusCode).send(e.message)
     }
 })
 
-todoRouter.delete('/task/:id',async(req,res)=>{
+todoRouter.delete(`${BASE_URL}/:id`,async(req,res)=>{
     try{
         await todoCollection.findByIdAndDelete({_id:req.params.id}, {new:true})
-        res.send("!Task Deleted")
+        const tasks=await todoCollection.find()
+        res.send(tasks)
     }catch(e){
-       res.status(500).send(e)
+        const statusCode = e.status || 500;
+        res.status(statusCode).send(e.message)
     }
 })
 
